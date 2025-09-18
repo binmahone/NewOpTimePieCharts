@@ -576,16 +576,39 @@ class SparkEventLogAnalyzer:
             operators.append(operator)
             percentages.append(stats['percentage'])
         
-        # Use a color palette
-        colors = colormap(range(len(operators)))
+        # Use a better color palette with eye-friendly colors
+        eye_friendly_colors = [
+            '#2E8B57',  # Sea Green
+            '#4682B4',  # Steel Blue  
+            '#8B4513',  # Saddle Brown
+            '#708090',  # Slate Gray
+            '#20B2AA',  # Light Sea Green
+            '#CD853F',  # Peru
+            '#4169E1',  # Royal Blue
+            '#8FBC8F',  # Dark Sea Green
+            '#9370DB',  # Medium Purple
+            '#DC143C',  # Crimson
+            '#FF6347',  # Tomato
+            '#32CD32',  # Lime Green
+            '#BA55D3',  # Medium Orchid
+            '#00CED1',  # Dark Turquoise
+            '#FF4500',  # Orange Red
+            '#6495ED',  # Cornflower Blue
+            '#D2691E',  # Chocolate
+            '#48D1CC',  # Medium Turquoise
+            '#9932CC',  # Dark Orchid
+            '#228B22'   # Forest Green
+        ]
         
-        # Highlight special categories
-        color_list = list(colors)
+        # Assign colors cyclically
+        color_list = []
         for i, operator in enumerate(operators):
             if operator == 'semWait':
-                color_list[i] = '#FFD700'  # Gold for semWait
+                color_list.append('#B8860B')  # Dark Goldenrod for semWait
             elif operator == 'Others':
-                color_list[i] = '#CCCCCC'  # Gray for Others
+                color_list.append('#808080')  # Gray for Others  
+            else:
+                color_list.append(eye_friendly_colors[i % len(eye_friendly_colors)])
         
         wedges, texts, autotexts = ax.pie(percentages, 
                                         labels=operators, 
@@ -639,8 +662,14 @@ class SparkEventLogAnalyzer:
         # Create the pie chart
         plt.figure(figsize=(12, 8))
         
-        # Use a color palette
-        colors = plt.cm.Set3(range(len(operators)))
+        # Use eye-friendly colors
+        eye_friendly_colors = [
+            '#2E8B57', '#4682B4', '#8B4513', '#708090', '#20B2AA', '#CD853F',
+            '#4169E1', '#8FBC8F', '#9370DB', '#DC143C', '#FF6347', '#32CD32',
+            '#BA55D3', '#00CED1', '#FF4500', '#6495ED', '#D2691E', '#48D1CC',
+            '#9932CC', '#228B22'
+        ]
+        colors = [eye_friendly_colors[i % len(eye_friendly_colors)] for i in range(len(operators))]
         
         wedges, texts, autotexts = plt.pie(percentages, 
                                          labels=operators, 
@@ -674,6 +703,97 @@ class SparkEventLogAnalyzer:
         
         plt.show()
     
+    def generate_text_report(self, original_stats, sister_stats, output_path=None):
+        """Generate a comprehensive text report in table format."""
+        if not output_path:
+            output_path = "operator_analysis_report.txt"
+        
+        with open(output_path, 'w') as f:
+            f.write("="*80 + "\n")
+            f.write("SPARK OPERATOR TIME ANALYSIS REPORT\n")
+            f.write("="*80 + "\n\n")
+            
+            # Summary statistics
+            f.write("SUMMARY STATISTICS\n")
+            f.write("-"*50 + "\n")
+            f.write(f"Total Executor Run Time: {self.total_executor_run_time / 1_000_000:.3f} seconds\n")
+            f.write(f"Total Original Metric Records: {len(self.metric_records)}\n")
+            f.write(f"Total Sister Metric Records: {len(self.sister_metric_records)}\n")
+            f.write(f"Total gpuSemaphoreWait Records: {self.semwait_record_count}\n")
+            f.write(f"Total SemWait Time: {self.total_semwait_time / 1_000_000_000:.3f} seconds\n")
+            f.write(f"Number of Unique Operators: {len([op for op in original_stats.keys() if op != 'Others'])}\n")
+            f.write("\n")
+            
+            # Original metrics table
+            f.write("ORIGINAL OP TIME BREAKDOWN\n")
+            f.write("-"*80 + "\n")
+            f.write(f"{'Operator':<30} {'Time (s)':<12} {'Time (ms)':<12} {'Percentage':<12}\n")
+            f.write("-"*80 + "\n")
+            
+            # Sort by percentage descending
+            sorted_original = sorted(original_stats.items(), 
+                                   key=lambda x: x[1]['percentage'], reverse=True)
+            
+            for operator, stats in sorted_original:
+                f.write(f"{operator:<30} {stats['time_seconds']:<12.3f} "
+                       f"{stats['time_ms']:<12.1f} {stats['percentage']:<12.2f}%\n")
+            
+            f.write("\n")
+            
+            # Sister metrics + semWait table
+            f.write("SISTER METRICS (EXCL. SEMWAIT) + SEMWAIT BREAKDOWN\n")
+            f.write("-"*80 + "\n")
+            f.write(f"{'Component':<30} {'Time (s)':<12} {'Time (ms)':<12} {'Percentage':<12}\n")
+            f.write("-"*80 + "\n")
+            
+            # Sort by percentage descending, but put semWait and Others at end
+            operators_without_special = {k: v for k, v in sister_stats.items() 
+                                       if k not in ['Others', 'semWait']}
+            sorted_sister = sorted(operators_without_special.items(), 
+                                 key=lambda x: x[1]['percentage'], reverse=True)
+            
+            # Add semWait if it exists
+            if 'semWait' in sister_stats:
+                sorted_sister.append(('semWait', sister_stats['semWait']))
+            
+            # Add Others at the end if it exists
+            if 'Others' in sister_stats:
+                sorted_sister.append(('Others', sister_stats['Others']))
+            
+            for component, stats in sorted_sister:
+                f.write(f"{component:<30} {stats['time_seconds']:<12.3f} "
+                       f"{stats['time_ms']:<12.1f} {stats['percentage']:<12.2f}%\n")
+            
+            f.write("\n")
+            
+            # Performance insights
+            f.write("PERFORMANCE INSIGHTS\n")
+            f.write("-"*50 + "\n")
+            
+            # Top 3 bottlenecks
+            top_3 = sorted_original[:3]
+            f.write("Top 3 Performance Bottlenecks:\n")
+            for i, (op, stats) in enumerate(top_3, 1):
+                if op != 'Others':
+                    f.write(f"{i}. {op}: {stats['percentage']:.2f}%\n")
+            
+            f.write(f"\nGPU Semaphore Wait Analysis:\n")
+            f.write(f"- Total wait time: {self.total_semwait_time / 1_000_000_000:.3f}s "
+                   f"({sister_stats.get('semWait', {}).get('percentage', 0):.2f}%)\n")
+            f.write(f"- Number of wait events: {self.semwait_record_count}\n")
+            if self.semwait_record_count > 0:
+                avg_wait = self.total_semwait_time / 1_000_000 / self.semwait_record_count
+                f.write(f"- Average wait time per event: {avg_wait:.1f} ms\n")
+            
+            # Coverage analysis
+            others_pct = original_stats.get('Others', {}).get('percentage', 0)
+            sister_others_pct = sister_stats.get('Others', {}).get('percentage', 0)
+            f.write(f"\nTime Coverage Analysis:\n")
+            f.write(f"- Original metrics coverage: {100 - others_pct:.1f}%\n")
+            f.write(f"- Sister metrics coverage: {100 - sister_others_pct:.1f}%\n")
+            
+        self.logger.info(f"Text report saved to: {output_path}")
+    
     def run_analysis(self, output_chart_path=None):
         """Run the complete analysis pipeline with dual pie charts."""
         self.parse_event_log()
@@ -695,6 +815,10 @@ class SparkEventLogAnalyzer:
         
         # Create dual pie charts
         self.create_dual_pie_charts(operator_stats, sister_stats, output_chart_path)
+        
+        # Generate text report
+        text_report_path = output_chart_path.replace('.png', '_report.txt') if output_chart_path else None
+        self.generate_text_report(operator_stats, sister_stats, text_report_path)
         
         return operator_stats, sister_stats, total_op_time, total_sister_time
 

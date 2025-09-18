@@ -1,0 +1,81 @@
+================================================================================
+SPARK OPERATOR TIME ANALYSIS REPORT
+================================================================================
+
+SUMMARY STATISTICS
+--------------------------------------------------
+Total Executor Run Time: 25783.059 seconds
+Total Original Metric Records: 508373
+Total Sister Metric Records: 457985
+Total gpuSemaphoreWait Records: 54376
+Total SemWait Time: 1783.155 seconds
+Number of Unique Operators: 20
+
+ORIGINAL OP TIME BREAKDOWN
+--------------------------------------------------------------------------------
+Operator                       Time (s)     Time (ms)    Percentage  
+--------------------------------------------------------------------------------
+GpuColumnarExchange            13526.041    13526040.5   52.46       %
+GpuScan parquet                5509.164     5509163.7    21.37       %
+GpuHashAggregate               1787.994     1787993.5    6.93        %
+GpuShuffleCoalesce             934.929      934929.1     3.63        %
+Others                         917.140      917140.3     3.56        %
+GpuBroadcastHashJoin           817.275      817275.5     3.17        %
+GpuCustomShuffleReader         721.484      721483.8     2.80        %
+GpuShuffledSymmetricHashJoin   598.067      598067.0     2.32        %
+GpuFilter                      574.133      574133.0     2.23        %
+GpuProject                     192.208      192207.8     0.75        %
+GpuShuffledHashJoin            64.596       64596.1      0.25        %
+GpuCoalesceBatches             50.411       50410.7      0.20        %
+GpuShuffledAsymmetricHashJoin  27.447       27446.6      0.11        %
+GpuSort                        27.243       27243.3      0.11        %
+GpuExpand                      18.542       18541.6      0.07        %
+GpuTopN                        13.071       13071.3      0.05        %
+GpuRunningWindow               2.368        2367.7       0.01        %
+GpuColumnarToRow               0.610        610.4        0.00        %
+GpuWindow                      0.164        163.7        0.00        %
+GpuUnion                       0.113        113.3        0.00        %
+GpuBroadcastNestedLoopJoin     0.060        60.1         0.00        %
+
+SISTER METRICS (EXCL. SEMWAIT) + SEMWAIT BREAKDOWN
+--------------------------------------------------------------------------------
+Component                      Time (s)     Time (ms)    Percentage  
+--------------------------------------------------------------------------------
+GpuScan parquet                4365.461     4365460.9    16.93       %
+GpuColumnarExchange            3529.687     3529686.7    13.69       %
+GpuHashAggregate               1729.769     1729769.2    6.71        %
+GpuShuffleCoalesce             841.963      841962.9     3.27        %
+GpuBroadcastHashJoin           816.357      816357.0     3.17        %
+GpuCustomShuffleReader         721.484      721483.8     2.80        %
+GpuShuffledSymmetricHashJoin   597.363      597363.2     2.32        %
+GpuFilter                      564.501      564500.7     2.19        %
+GpuProject                     191.026      191026.3     0.74        %
+GpuShuffledHashJoin            64.540       64539.6      0.25        %
+GpuCoalesceBatches             46.812       46811.6      0.18        %
+GpuShuffledAsymmetricHashJoin  27.338       27338.4      0.11        %
+GpuSort                        27.222       27221.7      0.11        %
+GpuExpand                      18.524       18523.6      0.07        %
+GpuTopN                        12.508       12508.4      0.05        %
+GpuRunningWindow               2.354        2353.7       0.01        %
+GpuColumnarToRow               0.600        599.6        0.00        %
+GpuWindow                      0.164        163.6        0.00        %
+GpuUnion                       0.073        73.1         0.00        %
+GpuBroadcastNestedLoopJoin     0.060        60.0         0.00        %
+semWait                        1783.155     1783155.0    6.92        %
+Others                         10442.100    10442099.9   40.50       %
+
+PERFORMANCE INSIGHTS
+--------------------------------------------------
+Top 3 Performance Bottlenecks:
+1. GpuColumnarExchange: 52.46%
+2. GpuScan parquet : 21.37%
+3. GpuHashAggregate: 6.93%
+
+GPU Semaphore Wait Analysis:
+- Total wait time: 1783.155s (6.92%)
+- Number of wait events: 54376
+- Average wait time per event: 32.8 ms
+
+Time Coverage Analysis:
+- Original metrics coverage: 96.4%
+- Sister metrics coverage: 59.5%

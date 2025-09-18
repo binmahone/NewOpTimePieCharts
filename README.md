@@ -1,120 +1,90 @@
 # Spark Operator Time Analyzer
 
-这个工具分析Spark事件日志，提取每个operator的时间统计信息并生成可视化报告。
+A tool to analyze Spark event logs and visualize operator time distribution with dual pie charts.
 
-## 功能
+## Features
 
-- 解析Spark事件日志中的`SparkListenerTaskEnd`和`SparkListenerSQLExecutionStart`事件
-- 提取每个operator的时间信息（支持"op time"、"gpuTime"等时间指标）
-- 统计每个operator的总时间和占比
-- 生成饼图可视化和详细报告
+- **Dual Perspective Analysis**: Shows both original op time and sister metrics (excl. SemWait) views
+- **GPU SemWait Tracking**: Tracks GPU semaphore wait times separately  
+- **Eye-Friendly Visualization**: Uses carefully selected colors for better readability
+- **Comprehensive Reports**: Generates both visual charts and detailed text reports
+- **Large File Support**: Handles multi-GB event logs efficiently
 
-## 安装依赖
+## Quick Start
 
+### Local Analysis
 ```bash
+# Install dependencies
 pip3 install -r requirements.txt
+
+# Analyze event log
+python3 spark_operator_analyzer.py /path/to/event-log --output analysis.png --verbose
 ```
 
-## 使用方法
-
-### 方法1：使用Python脚本直接分析
-
+### Remote Analysis on u38
 ```bash
-python3 spark_operator_analyzer.py /path/to/your/spark-events/event-log-file --output output.png --verbose
+# Deploy and run on u38 machine (automated)
+./deploy_and_run_u38.sh /data/spark/history/your-event-log
+
+# Or with default event log
+./deploy_and_run_u38.sh
 ```
 
-### 方法2：使用便捷脚本
+## Supported Time Metrics
 
-```bash
-chmod +x analyze_spark_logs.sh
-./analyze_spark_logs.sh /path/to/your/spark-events/event-log-file
-```
+**Original Metrics** (Left Chart):
+- `op time` - Standard operator time
+- `op time (shuffle read)` - Shuffle read time  
+- `op time (shuffle write partition & serial)` - Shuffle write time
+- `shuffle write time` - Shuffle write time
 
-如果不提供参数，脚本会使用默认的事件日志路径：`/home/hongbin/spark-events/local-1758175103938`
+**Sister Metrics** (Right Chart):
+- Same metrics with `(excl. SemWait)` suffix - Time excluding semaphore waits
+- `semWait` - Total GPU semaphore wait time from all `gpuSemaphoreWait` records
 
-## 输出文件
+## Output Files
 
-- **饼图**: `results/operator_time_distribution.png` - 显示各operator时间占比的饼图
-- **CSV报告**: `results/operator_time_report.csv` - 详细的时间统计数据
-- **控制台输出**: 详细的分析报告
+Each analysis generates:
+- **Dual Pie Chart** (`analysis.png`) - Side-by-side comparison of both perspectives
+- **Text Report** (`analysis_report.txt`) - Detailed tables and performance insights
 
-## 示例输出
+## Understanding the Results
 
-```
-================================================================================
-SPARK OPERATOR TIME ANALYSIS REPORT
-================================================================================
+### Left Chart: Original Op Time
+Shows complete operator times including all wait times. Best for understanding overall time distribution.
 
-Total Executor Run Time: 3947.755 seconds
-Total Operator Time: 11544173011.659 seconds
+### Right Chart: Sister Metrics + SemWait  
+Shows pure computation time separated from GPU wait times. Best for identifying:
+- **Computation bottlenecks** (operator bars)
+- **GPU resource contention** (semWait slice)
+- **Untracked time** (Others slice)
 
-Number of Operators: 9
-Number of Metric Records: 46439
-Number of Operator Mappings: 300
+### Key Insights
+- **High semWait %**: GPU resource contention, consider reducing parallelism
+- **Large Others %**: Many operations not tracked by sister metrics
+- **Top operators**: Primary computation bottlenecks to optimize
 
---------------------------------------------------------------------------------
-OPERATOR TIME BREAKDOWN
---------------------------------------------------------------------------------
-Operator                       Time (ms)    Time (s)   Percentage  
---------------------------------------------------------------------------------
-GpuProject                     4072452679660.262 4072452679.660 35.28       %
-GpuBroadcastHashJoin           2901840747976.288 2901840747.976 25.14       %
-GpuColumnarExchange            1900420145981.522 1900420145.982 16.46       %
-GpuCoalesceBatches             1001287311385.000 1001287311.385 8.67        %
-GpuRange                       607197910772.465 607197910.772 5.26        %
-```
+## File Structure
 
-## 工作原理
+- `spark_operator_analyzer.py` - Main analysis program
+- `deploy_and_run_u38.sh` - Automated u38 deployment script
+- `analyze_spark_logs.sh` - Local convenience script  
+- `requirements.txt` - Python dependencies
+- `README.md` - This documentation
 
-1. **提取时间指标**: 
-   - 从`SparkListenerTaskEnd`事件的Accumulables中提取op time（纳秒单位）
-   - 从`Task Metrics`中提取Executor Run Time（毫秒单位）
-2. **建立映射关系**: 从`SparkListenerSQLExecutionStart`事件的sparkPlanInfo中提取accumulatorId到operator的映射
-3. **单位统一**: 内部统一转换为一致的时间单位进行计算
-4. **聚合统计**: 将相同operator的时间进行累加
-5. **智能百分比计算**: 
-   - 当operator总时间 > executor时间时：基于operator总时间计算百分比
-   - 当operator总时间 < executor时间时：基于executor时间计算百分比，并添加"Others"类别
-6. **生成报告**: 创建饼图和详细报告
+## Requirements
 
-## 支持的时间指标类型
+- Python 3.7+
+- matplotlib, seaborn, pandas
+- SSH access to u38 (for remote analysis)
 
-### 原始指标 (第一个饼图)
-- `op time`: 标准的operator时间
-- `op time (shuffle read)`: Shuffle读取时间
-- `op time (shuffle write partition & serial)`: Shuffle写入分区和序列化时间
-- `shuffle write time`: Shuffle写入时间
+## Time Units
 
-### 姐妹指标 (第二个饼图)
-- `op time (excl. SemWait)`: 排除信号量等待的operator时间
-- `op time (shuffle read) (excl. SemWait)`: 排除信号量等待的Shuffle读取时间
-- `op time (shuffle write partition & serial) (excl. SemWait)`: 排除信号量等待的写入时间
-- `shuffle write time (excl. SemWait)`: 排除信号量等待的Shuffle写入时间
-- `semWait`: 所有gpuSemaphoreWait的总和
+- **Op time metrics**: Stored as nanoseconds in event log
+- **Executor Run Time**: Stored as milliseconds in event log  
+- **gpuSemaphoreWait**: Parsed from "HH:MM:SS.mmm" format
+- All conversions handled automatically
 
-注意：程序生成两个饼图提供不同的视角分析operator时间分布。
+---
 
-## "Others"类别说明
-
-当operator时间总和小于executor时间时，程序会自动添加"Others"类别来表示未被跟踪的时间，包括：
-- JVM开销、GC暂停
-- 网络/IO等待时间
-- Spark框架开销
-- 其他未映射的操作时间
-
-## 注意事项
-
-- **时间单位**：
-  - Op time在事件日志中以**纳秒(ns)**为单位存储
-  - Executor Run Time在事件日志中以**毫秒(ms)**为单位存储
-  - 程序内部自动处理单位转换
-- 在GPU工作负载中，operator时间通常会超过executor时间（由于并行执行）
-- 程序会智能选择合适的基准来计算百分比
-- 未映射的accumulator ID会在日志中显示警告
-
-## 文件说明
-
-- `spark_operator_analyzer.py`: 主分析程序
-- `analyze_spark_logs.sh`: 便捷运行脚本
-- `demo_others_category.py`: 演示"Others"功能的示例脚本
-- `requirements.txt`: Python依赖包列表
+For questions or issues, check the generated text reports for detailed performance insights.
