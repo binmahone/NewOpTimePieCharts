@@ -1,0 +1,67 @@
+
+  private def parseEventLogs(): (List[MetricRecord], List[TaskTimeRecord]) = {
+    implicit val formats: DefaultFormats.type = DefaultFormats
+    val metrics = mutable.ListBuffer[MetricRecord]()
+    val taskTimes = mutable.ListBuffer[TaskTimeRecord]()
+    
+    val eventLogFiles = eventLogDir.listFiles()
+      .filter(f => f.getName.endsWith(".inprogress") || !f.getName.contains("_tmp_"))
+      .toList
+    
+    eventLogFiles.foreach { file =>
+      try {
+        val lines = Source.fromFile(file, "UTF-8").getLines().toList
+        
+        lines.foreach { line =>
+          try {
+            val json = parse(line)
+            val eventType = (json \ "Event").extractOpt[String]
+            
+            eventType match {
+              case Some("SparkListenerTaskEnd") =>
+                val stageId = (json \ "Stage ID").extractOpt[Int]
+                val taskInfo = (json \ "Task Info")
+                
+                // Extract task execution time from Task Metrics
+                val taskId = (taskInfo \ "Task ID").extractOpt[Long]
+                val taskMetrics = (json \ "Task Metrics")
+                // https://github.com/apache/spark/blob/450b415028c3b00f3a002126cd11318d3932e28f/
+                // core/src/main/scala/org/apache/spark/ui/jobs/StagePage.scala#L151
+                val executorRunTime = (taskMetrics \ "Executor Run Time").extractOpt[Long]
+                
+                (taskId, executorRunTime) match {
+                  case (Some(tId), Some(runTime)) =>
+                    taskTimes += TaskTimeRecord(tId, runTime, stageId)
+                  case _ => // Skip if timing data is incomplete
+                }
+                
+                // Extract operator time metrics
+                val accumulables = (taskInfo \ "Accumulables").extract[List[JObject]]
+                accumulables.foreach { acc =>
+
+                  // refer org.apache.spark.scheduler.AccumulableInfo
+                  val name = (acc \ "Name").extractOpt[String]
+                  val value = (acc \ "Update").extractOpt[String]
+                  
+                  (name, value) match {
+                    case (Some(n), Some(v)) if n.equals("op time") => {
+                      metrics += MetricRecord(n, v.toLong, stageId)
+                    }
+                    case _ => // Ignore other metrics
+                  }
+                }
+                
+              case _ => // Ignore other events
+            }
+          } catch {
+            case _: Exception => // Skip malformed lines
+          }
+        }
+      } catch {
+        case e: Exception =>
+          println(s"Warning: Could not parse event log ${file.getName}: ${e.getMessage}")
+      }
+    }
+    
+    (metrics.toList, taskTimes.toList)
+  }
