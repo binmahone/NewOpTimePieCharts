@@ -79,12 +79,20 @@ GpuRange                       607197910772.465 607197910.772 5.26        %
 
 ## 支持的时间指标类型
 
+### 原始指标 (第一个饼图)
 - `op time`: 标准的operator时间
 - `op time (shuffle read)`: Shuffle读取时间
 - `op time (shuffle write partition & serial)`: Shuffle写入分区和序列化时间
 - `shuffle write time`: Shuffle写入时间
 
-注意：程序只统计以上op time相关的指标，不包括其他时间相关的指标如gpuTime、executor time等。
+### 姐妹指标 (第二个饼图)
+- `op time (excl. SemWait)`: 排除信号量等待的operator时间
+- `op time (shuffle read) (excl. SemWait)`: 排除信号量等待的Shuffle读取时间
+- `op time (shuffle write partition & serial) (excl. SemWait)`: 排除信号量等待的写入时间
+- `shuffle write time (excl. SemWait)`: 排除信号量等待的Shuffle写入时间
+- `semWait`: 所有gpuSemaphoreWait的总和
+
+注意：程序生成两个饼图提供不同的视角分析operator时间分布。
 
 ## "Others"类别说明
 
