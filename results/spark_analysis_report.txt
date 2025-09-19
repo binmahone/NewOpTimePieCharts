@@ -6,7 +6,7 @@ SUMMARY STATISTICS
 --------------------------------------------------
 Total Executor Run Time: 25783.059 seconds
 Total Original Metric Records: 508373
-Total Sister Metric Records: 457985
+Total Sister Metric Records: 507267
 Total gpuSemaphoreWait Records: 54376
 Total SemWait Time: 1783.155 seconds
 Number of Unique Operators: 20
@@ -41,8 +41,8 @@ SISTER METRICS (EXCL. SEMWAIT) + SEMWAIT BREAKDOWN
 --------------------------------------------------------------------------------
 Component                      Time (s)     Time (ms)    Percentage  
 --------------------------------------------------------------------------------
+GpuColumnarExchange            13390.860    13390860.4   51.94       %
 GpuScan parquet                4365.461     4365460.9    16.93       %
-GpuColumnarExchange            3529.687     3529686.7    13.69       %
 GpuHashAggregate               1729.769     1729769.2    6.71        %
 GpuShuffleCoalesce             841.963      841962.9     3.27        %
 GpuBroadcastHashJoin           816.357      816357.0     3.17        %
@@ -62,7 +62,7 @@ GpuWindow                      0.164        163.6        0.00        %
 GpuUnion                       0.073        73.1         0.00        %
 GpuBroadcastNestedLoopJoin     0.060        60.0         0.00        %
 semWait                        1783.155     1783155.0    6.92        %
-Others                         10442.100    10442099.9   40.50       %
+Others                         580.926      580926.1     2.25        %
 
 PERFORMANCE INSIGHTS
 --------------------------------------------------
@@ -78,4 +78,4 @@ GPU Semaphore Wait Analysis:
 
 Time Coverage Analysis:
 - Original metrics coverage: 96.4%
-- Sister metrics coverage: 59.5%
+- Sister metrics coverage: 97.7%

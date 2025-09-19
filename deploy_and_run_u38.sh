@@ -50,8 +50,12 @@ fi
 
 # Step 6: Run analysis
 echo "[6/6] Running Spark operator analysis..."
-OUTPUT_PREFIX="analysis_$(date +%Y%m%d_%H%M%S)"
-OUTPUT_FILE="${OUTPUT_PREFIX}.png"
+
+# Create results directory on u38
+ssh $U38_HOST "mkdir -p $U38_BASE_DIR/results"
+
+# Use fixed filenames
+OUTPUT_FILE="results/spark_analysis.png"
 
 echo "Starting analysis... This may take several minutes for large files."
 echo "Output will be saved as: $OUTPUT_FILE"
@@ -67,19 +71,24 @@ echo "Analysis completed in ${DURATION} seconds!"
 
 # Step 7: Copy results back to local machine
 echo "Copying results back to local machine..."
-scp $U38_HOST:$U38_BASE_DIR/$OUTPUT_FILE .
-scp $U38_HOST:$U38_BASE_DIR/${OUTPUT_PREFIX}_report.txt .
+
+# Create local results directory if it doesn't exist
+mkdir -p results
+
+# Copy files with fixed names
+scp $U38_HOST:$U38_BASE_DIR/$OUTPUT_FILE results/
+scp $U38_HOST:$U38_BASE_DIR/results/spark_analysis_report.txt results/
 
 echo ""
 echo "=============================================================="
 echo "Analysis Complete!"
 echo "=============================================================="
 echo "Files copied to local machine:"
-echo "- Pie chart: $OUTPUT_FILE"
-echo "- Text report: ${OUTPUT_PREFIX}_report.txt"
+echo "- Pie chart: results/spark_analysis.png"
+echo "- Text report: results/spark_analysis_report.txt"
 echo ""
 echo "Analysis summary:"
-ssh $U38_HOST "cd $U38_BASE_DIR && tail -20 ${OUTPUT_PREFIX}_report.txt | head -10"
+ssh $U38_HOST "cd $U38_BASE_DIR && tail -20 results/spark_analysis_report.txt | head -10"
 echo ""
 echo "To view detailed results, check the files above."
 echo "=============================================================="

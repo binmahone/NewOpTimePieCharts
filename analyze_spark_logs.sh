@@ -16,14 +16,14 @@ fi
 echo "Analyzing Spark event log: $EVENT_LOG_PATH"
 echo "Output directory: $OUTPUT_DIR"
 
-# Run the analysis
+# Run the analysis with fixed filenames
 python3 spark_operator_analyzer.py "$EVENT_LOG_PATH" \
-    --output "$OUTPUT_DIR/operator_time_distribution.png" \
+    --output "$OUTPUT_DIR/spark_analysis.png" \
     --verbose
 
 echo ""
 echo "Analysis complete! Check the following files:"
-echo "- Pie chart: $OUTPUT_DIR/operator_time_distribution.png"
+echo "- Pie chart: $OUTPUT_DIR/spark_analysis.png"
 
 # Also create a simple CSV report
 echo "Creating CSV report..."
@@ -37,7 +37,7 @@ analyzer = SparkEventLogAnalyzer('$EVENT_LOG_PATH')
 operator_stats, total_time = analyzer.run_analysis()
 
 # Write CSV report
-csv_file = '$OUTPUT_DIR/operator_time_report.csv'
+csv_file = '$OUTPUT_DIR/spark_analysis.csv'
 with open(csv_file, 'w', newline='') as f:
     writer = csv.writer(f)
     writer.writerow(['Operator', 'Time_Nanoseconds', 'Time_Milliseconds', 'Time_Seconds', 'Percentage'])
@@ -55,4 +55,5 @@ with open(csv_file, 'w', newline='') as f:
 print(f'CSV report saved to: {csv_file}')
 "
 
-echo "- CSV report: $OUTPUT_DIR/operator_time_report.csv"
+echo "- CSV report: $OUTPUT_DIR/spark_analysis.csv"
+echo "- Text report: $OUTPUT_DIR/spark_analysis_report.txt"

@@ -60,7 +60,9 @@ class SparkEventLogAnalyzer:
                 ))
             
             # Include sister op time metrics (excl. SemWait)
-            elif self._is_sister_time_metric(metric_name) and accumulator_id is not None:
+            # Note: Using 'if' instead of 'elif' to allow metrics like 'shuffle write time' 
+            # to be captured by both original and sister metrics
+            if self._is_sister_time_metric(metric_name) and accumulator_id is not None:
                 self.sister_operator_mappings.append(OperatorMapping(
                     accumulator_id=accumulator_id,
                     operator_name=node_name,
@@ -147,7 +149,9 @@ class SparkEventLogAnalyzer:
                     continue
             
             # Process sister op time metrics (excl. SemWait)
-            elif self._is_sister_time_metric(name) and update_value and accumulator_id:
+            # Note: Using 'if' instead of 'elif' to allow metrics like 'shuffle write time'
+            # to be captured by both original and sister metrics
+            if self._is_sister_time_metric(name) and update_value and accumulator_id:
                 try:
                     op_time_ns = self._parse_time_value(update_value)
                     if op_time_ns > 0:  # Only add positive time values
@@ -188,7 +192,7 @@ class SparkEventLogAnalyzer:
             'op time (excl. SemWait)',
             'op time (shuffle read) (excl. SemWait)',
             'op time (shuffle write partition & serial) (excl. SemWait)',
-            'shuffle write time (excl. SemWait)'
+            'shuffle write time'
         ]
         metric_lower = metric_name.lower()
         return any(pattern.lower() == metric_lower for pattern in sister_time_patterns)
